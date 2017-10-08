@@ -15,7 +15,6 @@
 
 
 -- Encode a clip of the current file
--- TODO: Use higher precision than seconds
 
 local mp = require 'mp'
 local options = require 'mp.options'
@@ -23,12 +22,12 @@ local os = require 'os'
 
 -- Options
 local o = {
-    -- Key bindings
-    key_set_start_frame = "c",
-    key_set_stop_frame = "C",
-    key_start_encode = "ctrl+C",
+	-- Key bindings
+	key_set_start_frame = "c",
+	key_set_stop_frame = "C",
+	key_start_encode = "ctrl+C",
 
-    -- Audio settings
+	-- Audio settings
 	audio_codec = "libopus",
 	audio_bitrate = "192k",
 
@@ -36,7 +35,7 @@ local o = {
 	video_codec = "libx265",
 	video_crf = "25",
 	video_pixel_format = "yuv420p10",
-	video_resolution = nil, -- source resolution if not specified
+	video_resolution = "", -- source resolution if not specified
 
 	-- Misc settings
 	encoding_preset = "fast",
@@ -62,10 +61,10 @@ function encode()
 	local out = o.output_directory.."/"..mp.get_property("media-title").."-clip-"..start_frame.."-"..
 		stop_frame..".mkv"
 	local res
-	if o.video_resolution then
-		res = o.video_resolution
-	else
+	if o.video_resolution == "" then
 		res = mp.get_property("width").."x"..mp.get_property("height")
+	else
+		res = o.video_resolution
 	end
 	local saf = start_frame
 	local sof = stop_frame
@@ -74,7 +73,7 @@ function encode()
 		stop_fram = nil
 	end
 
-	mp.osd_message("Starting encode from "..saf.." to "..sof.." into "..out)
+	mp.osd_message("Starting encode from "..saf.." to "..sof.." into "..out, 3.5)
 	local time = os.time()
 
 	-- TODO: handle youtube-dl URLs
@@ -84,22 +83,23 @@ function encode()
 		" -pix_fmt "..o.video_pixel_format.." -crf "..o.video_crf.." -s "..res..
 		" -preset "..o.encoding_preset..' "'..out..'"')
 
-	mp.osd_message("Finished encode of "..out.." in "..os.time()-time.." seconds", 5000)
+	mp.osd_message("Finished encode of "..out.." in "..os.time()-time.." seconds", 3.5)
 end
 
--- TODO: Switch away from _forced_
 -- Start frame key binding
-mp.add_forced_key_binding(o.key_set_start_frame,
+mp.add_key_binding(o.key_set_start_frame, "clip-start",
 	function()
 		start_frame = mp.get_property("playback-time")
+		mp.osd_message("Clip start at "..start_frame.."s")
 	end)
 -- Stop frame key binding
-mp.add_forced_key_binding(o.key_set_stop_frame,
+mp.add_key_binding(o.key_set_stop_frame, "clip-end",
 	function()
 		stop_frame = mp.get_property("playback-time")
+		mp.osd_message("Clip end at "..stop_frame.."s")
 	end)
 -- Start encode key binding
-mp.add_forced_key_binding(o.key_start_encode,
+mp.add_key_binding(o.key_start_encode, "clip-encode",
 	function()
 		encode()	
 	end)
