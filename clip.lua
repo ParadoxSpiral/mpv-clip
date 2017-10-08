@@ -92,7 +92,6 @@ end
 mp.add_forced_key_binding(o.key_set_start_frame,
 	function()
 		start_frame = mp.get_property("playback-time")
-		mp.osd_message(mp.get_property("video-format").."|"..mp.get_property("video-codec"))
 	end)
 -- Stop frame key binding
 mp.add_forced_key_binding(o.key_set_stop_frame,
