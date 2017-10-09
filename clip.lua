@@ -18,7 +18,8 @@
 
 local mp = require 'mp'
 local options = require 'mp.options'
-local os = require 'os'
+
+require 'os'
 
 -- Options
 local o = {
@@ -57,15 +58,21 @@ function encode()
 		mp.osd_message("No stop frame set!")
 		return
 	end
+	if start_frame == stop_frame then
+		mp.osd_message("Cannot create zero length clip!", 1.5)
+	end
 
-	local out = o.output_directory.."/"..mp.get_property("media-title").."-clip-"..start_frame.."-"..
-		stop_frame..".mkv"
+	local path = mp.get_property("path")
+	local out = o.output_directory.."/"..mp.get_property("media-title").."-clip-"..start_frame..
+		"-"..stop_frame..".mkv"
+	
 	local res
 	if o.video_resolution == "" then
 		res = mp.get_property("width").."x"..mp.get_property("height")
 	else
 		res = o.video_resolution
 	end
+
 	local saf = start_frame
 	local sof = stop_frame
 	if o.clear_start_stop_on_encode then
@@ -73,16 +80,20 @@ function encode()
 		stop_fram = nil
 	end
 
+	-- Check if ytdl is needed
+	local append
+	if not os.execute('ffprobe "'..path..'"') then
+		append = 'youtube-dl "'..path..'" -o - | ffmpeg -i -'
+	else
+		append = 'ffmpeg -i "'..path..'"'
+	end
 	mp.osd_message("Starting encode from "..saf.." to "..sof.." into "..out, 3.5)
 	local time = os.time()
-
-	-- TODO: handle youtube-dl URLs
-	-- FIXME: Chapters don't get their time adjusted
-	os.execute("ffmpeg -ss "..saf..' -i "'..mp.get_property("path")..'" -to '..sof-saf..
+	-- Map metadata properly, like chapters or embedded fonts
+	os.execute(append.." -ss "..saf.." -to "..sof-saf..
 		" -c:a "..o.audio_codec.." -b:a "..o.audio_bitrate.." -c:v "..o.video_codec..
 		" -pix_fmt "..o.video_pixel_format.." -crf "..o.video_crf.." -s "..res..
 		" -preset "..o.encoding_preset..' "'..out..'"')
-
 	mp.osd_message("Finished encode of "..out.." in "..os.time()-time.." seconds", 3.5)
 end
 
@@ -90,13 +101,20 @@ end
 mp.add_key_binding(o.key_set_start_frame, "clip-start",
 	function()
 		start_frame = mp.get_property("playback-time")
+		if not start_frame then
+			start_frame = 0
+		end
 		mp.osd_message("Clip start at "..start_frame.."s")
 	end)
 -- Stop frame key binding
 mp.add_key_binding(o.key_set_stop_frame, "clip-end",
 	function()
 		stop_frame = mp.get_property("playback-time")
-		mp.osd_message("Clip end at "..stop_frame.."s")
+		if not stop_frame then
+			mp.osd_message("playback-time is nil! (file not yet loaded?)")
+		else
+			mp.osd_message("Clip end at "..stop_frame.."s")
+		end
 	end)
 -- Start encode key binding
 mp.add_key_binding(o.key_start_encode, "clip-encode",
