@@ -34,12 +34,12 @@ local o = {
 
 	-- Video settings
 	video_codec = "libx265",
-	video_crf = "25",
+	video_crf = "24",
 	video_pixel_format = "yuv420p10",
 	video_resolution = "", -- source resolution if not specified
 
 	-- Misc settings
-	encoding_preset = "fast",
+	encoding_preset = "medium", -- empty for no preset
 	output_directory = "/tmp",
 	clear_start_stop_on_encode = true,
 }
@@ -80,6 +80,11 @@ function encode()
 		stop_fram = nil
 	end
 
+	local preset = ""
+	if o.encoding_preset ~= "" then
+		preset = "-preset "..o.encoding_preset
+	end
+
 	-- Check if ytdl is needed
 	local input
 	if not os.execute('ffprobe "'..path..'"') then
@@ -90,10 +95,10 @@ function encode()
 	mp.osd_message("Starting encode from "..saf.." to "..sof.." into "..out, 3.5)
 	local time = os.time()
 	-- FIXME: Map metadata properly, like chapters or embedded fonts
-	os.execute(input.." -ss "..saf.." -to "..sof-saf..
+	os.execute(input.." -ss "..saf.." -t "..sof-saf..
 		" -c:a "..o.audio_codec.." -b:a "..o.audio_bitrate.." -c:v "..o.video_codec..
 		" -pix_fmt "..o.video_pixel_format.." -crf "..o.video_crf.." -s "..res..
-		" -preset "..o.encoding_preset..' "'..out..'"')
+		" "..preset..' "'..out..'"')
 	mp.osd_message("Finished encode of "..out.." in "..os.time()-time.." seconds", 3.5)
 end
 
