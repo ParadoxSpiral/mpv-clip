@@ -3,7 +3,7 @@ Encode a clip of the current file
 
 # Requirements
 `ffmpeg`, `ffprobe`, and `youtube-dl` are required to be in the `$PATH`.
-Posix `|` pipes need to be functional.
+Posix `|` pipes need to be functional for youtube-dl support.
 
 # Usage
 Place `clip.lua` in your `~/.config/mpv/scripts/` or `~/.mpv/scripts/` folder to autoload the 
@@ -22,3 +22,6 @@ ctrl+C script_binding clip-encode
 # Limitations
 To get milisecond precision seeking working, seeking is done with the slow input seeking method.
 This means, that the current file is decoded and discarded upto the start point.
+
+Metadata handling only copies the global metadata, embedded fonts etc. are not (yet!) copied.
+Chapters also don't get their time-stamp adjusted.

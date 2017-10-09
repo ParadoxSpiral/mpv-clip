@@ -81,16 +81,16 @@ function encode()
 	end
 
 	-- Check if ytdl is needed
-	local append
+	local input
 	if not os.execute('ffprobe "'..path..'"') then
-		append = 'youtube-dl "'..path..'" -o - | ffmpeg -i -'
+		input = 'youtube-dl "'..path..'" -o - | ffmpeg -i -'
 	else
-		append = 'ffmpeg -i "'..path..'"'
+		input = 'ffmpeg -i "'..path..'"'
 	end
 	mp.osd_message("Starting encode from "..saf.." to "..sof.." into "..out, 3.5)
 	local time = os.time()
-	-- Map metadata properly, like chapters or embedded fonts
-	os.execute(append.." -ss "..saf.." -to "..sof-saf..
+	-- FIXME: Map metadata properly, like chapters or embedded fonts
+	os.execute(input.." -ss "..saf.." -to "..sof-saf..
 		" -c:a "..o.audio_codec.." -b:a "..o.audio_bitrate.." -c:v "..o.video_codec..
 		" -pix_fmt "..o.video_pixel_format.." -crf "..o.video_crf.." -s "..res..
 		" -preset "..o.encoding_preset..' "'..out..'"')
