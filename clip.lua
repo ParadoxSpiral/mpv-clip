@@ -40,11 +40,12 @@ local o = {
 	video_height= "", -- source height if not specified
 	video_upscale = false, -- upscale if video res is lower than desired res
 
-
 	-- Misc settings
 	encoding_preset = "medium", -- empty for no preset
 	output_directory = "/tmp",
 	clear_start_stop_on_encode = true,
+	block_exit = false, -- stop mpv from quitting before the encode finished, if false…
+		-- …mpv will quit but ffmpeg will be kept alive
 }
 options.read_options(o)
 
@@ -97,14 +98,31 @@ function encode()
 	else
 		input = 'ffmpeg -i "'..path..'"'
 	end
-	mp.osd_message("Starting encode from "..saf.." to "..sof.." into "..out, 3.5)
-	local time = os.time()
+
 	-- FIXME: Map metadata properly, like chapters or embedded fonts
-	os.execute(input.." -ss "..saf.." -t "..sof-saf..
+	local command = input.." -ss "..saf.." -t "..sof-saf..
 		" -c:a "..o.audio_codec.." -b:a "..o.audio_bitrate.." -c:v "..o.video_codec..
 		" -pix_fmt "..o.video_pixel_format.." -crf "..o.video_crf.." -s "..width.."x"..
-		height.." "..preset..' "'..out..'"')
-	mp.osd_message("Finished encode of "..out.." in "..os.time()-time.." seconds", 3.5)
+		height.." "..preset..' "'..out..'"'
+	local time = os.time()
+
+	mp.osd_message("Starting encode from "..saf.." to "..sof.." into "..out, 3.5)
+	if o.block_exit then
+		os.execute(command)
+		mp.osd_message("Finished encode of "..out.." in "..os.time()-time.." seconds", 3.5)
+	else
+		-- FIXME: Won't work on Windows, because of special snowflake pipe naming
+		local ipc = mp.get_property("input-ipc-server")
+		local del_tmp = ""
+		if ipc == "" then
+			ipc = os.tmpname()
+			mp.set_property("input-ipc-server", ipc)
+			del_tmp = " && lua -e 'os.remove(\""..ipc.."\")'"
+		end
+		os.execute(command..' && echo "{ \\"command\\": [\\"show-text\\", \\"Finished encode of \''
+			..out..'\' in $(lua -e "print(os.time()-'..time..')") seconds\\", 3500] }" | socat - '
+			..ipc..del_tmp.." &")
+	end
 end
 
 -- Start frame key binding
