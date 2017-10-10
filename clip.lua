@@ -36,7 +36,10 @@ local o = {
 	video_codec = "libx265",
 	video_crf = "24",
 	video_pixel_format = "yuv420p10",
-	video_resolution = "", -- source resolution if not specified
+	video_width = "", -- source width if not specified
+	video_height= "", -- source height if not specified
+	video_upscale = false, -- upscale if video res is lower than desired res
+
 
 	-- Misc settings
 	encoding_preset = "medium", -- empty for no preset
@@ -66,11 +69,13 @@ function encode()
 	local out = o.output_directory.."/"..mp.get_property("media-title").."-clip-"..start_frame..
 		"-"..stop_frame..".mkv"
 	
-	local res
-	if o.video_resolution == "" then
-		res = mp.get_property("width").."x"..mp.get_property("height")
-	else
-		res = o.video_resolution
+	local width = mp.get_property("width")
+	local height = mp.get_property("height")
+	if o.video_width ~= "" and (o.video_width < width or o.video_upscale) then
+		width = o.video_width
+	end
+	if o.video_height ~= "" and (o.video_height < height or o.video_upscale) then
+		height = o.video_height
 	end
 
 	local saf = start_frame
@@ -97,8 +102,8 @@ function encode()
 	-- FIXME: Map metadata properly, like chapters or embedded fonts
 	os.execute(input.." -ss "..saf.." -t "..sof-saf..
 		" -c:a "..o.audio_codec.." -b:a "..o.audio_bitrate.." -c:v "..o.video_codec..
-		" -pix_fmt "..o.video_pixel_format.." -crf "..o.video_crf.." -s "..res..
-		" "..preset..' "'..out..'"')
+		" -pix_fmt "..o.video_pixel_format.." -crf "..o.video_crf.." -s "..width.."x"..
+		height.." "..preset..' "'..out..'"')
 	mp.osd_message("Finished encode of "..out.." in "..os.time()-time.." seconds", 3.5)
 end
 
